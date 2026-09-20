@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xargs -I{} echo {})",
+      "Bash(xargs grep -liE \"rabbitmq|amqp|job.?application|JOB_QUEUE|queue\")",
+      "Bash(xargs grep -liE \"jobapplication|job_application\")",
+      "Read(//c/Users/juanc/AppData/Local/Temp/claude/**)"
+    ]
+  }
+}

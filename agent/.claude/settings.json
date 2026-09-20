@@ -1,0 +1,35 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "WebFetch(domain:docs.nvidia.com)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:platform.stepfun.com)",
+      "WebFetch(domain:platform.stepfun.ai)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(d[0]['content'][1]['image_url']['url'][:80]\\)\")",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); c=d[0]['content']; print\\(type\\(c[1]\\)\\); iu=c[1]['image_url']['url']; print\\('type:', iu[:30]\\); print\\('len:', len\\(iu\\)\\)\")",
+      "Bash(npm list *)",
+      "Bash(curl -s \"https://www.gstatic.com/recaptcha/releases/ne1iDVwClkE7nKD3uA9Vqsvl/styles__ltr.css\")",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(d[0]['content'][0]['text']\\)\")",
+      "Bash(npm install *)",
+      "Bash(npx tsc *)",
+      "Bash(sort -t_ -k2 -n)",
+      "Bash(xargs ls -la)",
+      "Bash(python3 -c ' *)",
+      "Bash(python3 -)",
+      "Bash(git -C /app diff --stat src/chrome/apply.js)",
+      "Bash(git -C /app status --short src/chrome/apply.js)",
+      "Bash(node -e ' *)",
+      "Bash(xargs -I{} echo {})",
+      "Read(//tmp/**)",
+      "Bash(grep -l \"policies.google\\\\|Privacy\" /tmp/bframe_*.html 2>/dev/null | tail -5; echo \"---\"; grep -o 'href=\"[^\"]*polic[^\"]*\"' /tmp/bframe_1785590813778_por_verifyClicked.html 2>/dev/null)",
+      "Bash(env)",
+      "Bash(PGPASSWORD=postgres psql -h localhost -U postgres -d app -c \"select 1;\")",
+      "Bash(node /tmp/claude-1001/-app/6d448507-dafe-4f14-85cd-59e928769da6/scratchpad/query.mjs)",
+      "Bash(node -e \"require.resolve\\('pg'\\)\")",
+      "Bash(cp /tmp/claude-1001/-app/6d448507-dafe-4f14-85cd-59e928769da6/scratchpad/query.mjs /app/__tmp_query.mjs)",
+      "Bash(node __tmp_query.mjs)",
+      "Bash(rm -f /app/__tmp_query.mjs)"
+    ]
+  }
+}

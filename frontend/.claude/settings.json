@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep \"fetch\\\\`\")",
+      "Bash(grep -rn \"\\\\`\\\\${BASE}\" /app/src/ --include=\"*.ts\" --include=\"*.tsx\")"
+    ]
+  }
+}

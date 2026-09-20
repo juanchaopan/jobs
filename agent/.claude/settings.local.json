@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls /tmp/bframe_*.html /tmp/main_*.html 2>/dev/null | sort | tail -40)",
+      "Read(//tmp/**)",
+      "Bash(cat /tmp/security.log 2>/dev/null | tail -80)",
+      "Bash(xargs -I{} sh -c 'echo \"=== {} ===\"; cat {}')",
+      "Bash(node --input-type=module)",
+      "Bash(node --check /app/src/chrome/security.js)",
+      "Bash(find /root /home -path \"*/Code/User/Backups/*\" 2>/dev/null | head -20)",
+      "Read(//root/**)",
+      "Bash(find /mnt/c/Users -path \"*/Code/User/History/*\" -name \"*.js\" 2>/dev/null | xargs grep -l \"navigateBack\\\\|navigateTo\\\\|apply\" 2>/dev/null | head -20)",
+      "Read(//mnt/c/**)",
+      "Bash(ls /mnt/ 2>/dev/null)",
+      "Read(//mnt/**)",
+      "Bash(find /root /home /tmp /var -maxdepth 8 -path \"*/Code*History*\" -type d 2>/dev/null | head -10)",
+      "Read(//home/**)",
+      "Bash(find /root /home -name \"entries.json\" 2>/dev/null | head -10)",
+      "Bash(cp /home/node/.vscode-server/data/User/History/-5a7a7419/duA4.js /app/src/chrome/apply.bak.js)",
+      "WebFetch(domain:build.nvidia.com)",
+      "WebSearch"
+    ],
+    "additionalDirectories": [
+      "/home/node/.vscode-server/data/User/History/-5a7a7419"
+    ]
+  }
+}

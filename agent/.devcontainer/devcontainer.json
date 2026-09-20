@@ -1,0 +1,20 @@
+{
+	"name": "agent",
+	"dockerComposeFile": "${localWorkspaceFolder}/../docker-compose.yml",
+	"service": "agent",
+	"workspaceFolder": "/app",
+	"features": {},
+	"forwardPorts": [],
+	"postCreateCommand": "",
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"dbaeumer.vscode-eslint",
+        "anthropic.claude-code"
+			]
+		}
+	},
+	"runServices": [
+		"agent"
+	]
+}

@@ -1,0 +1,170 @@
+import { ChatOpenAI } from '@langchain/openai';
+import fs from 'fs';
+
+function dumpInvokeParams(params: unknown[], tag: string): void {
+  const id = Math.random().toString(36).slice(2, 8);
+  const file = `/tmp/invoke-${id}-${tag}.json`;
+  fs.writeFileSync(file, JSON.stringify(params, null, 2));
+  console.log(`h: dumpInvokeParams id=${id} tag=${tag} file=${file}`);
+}
+
+// reCAPTCHA sprite URLs are single-use: the server returns 410 on any re-fetch.
+// Cache by URL so repeated rounds against the same grid reuse the first successful fetch.
+const spriteCache = new Map<string, string>();
+
+async function fetchAsDataUrl(url: string): Promise<string> {
+  const cached = spriteCache.get(url);
+  if (cached) return cached;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Failed to fetch image: ${res.status} ${url}`);
+  const contentType = res.headers.get('content-type') ?? 'image/jpeg';
+  const buf = await res.arrayBuffer();
+  const b64 = Buffer.from(buf).toString('base64');
+  const dataUrl = `data:${contentType};base64,${b64}`;
+  spriteCache.set(url, dataUrl);
+  return dataUrl;
+}
+
+const model = new ChatOpenAI({
+  model: process.env.VISION_MODEL ?? '',
+  apiKey: process.env.VISION_MODEL_API_KEY,
+  configuration: {
+    baseURL: process.env.VISION_MODEL_BASE_URL ?? '',
+  },
+});
+
+function parseIds(text: string): number[] {
+  const match = text.match(/\[[\s\d,]*\]/);
+  if (!match) return [];
+  try {
+    const arr = JSON.parse(match[0]);
+    if (Array.isArray(arr)) return arr.filter((x): x is number => typeof x === 'number');
+  } catch { /* fall through */ }
+  return [];
+}
+
+/**
+ * Case A — composite/sprite grid: all tiles share a single image URL.
+ * Send the full grid image ONCE and ask the model which numbered cells match.
+ * This mirrors the ChatGPT test: one image + "which of the N×N cells contain X?"
+ * cellIds: subset of cells still showing this sprite (all on round 1, fewer after
+ * some tiles have been refreshed to individual images).
+ */
+async function solveCompositeGrid(
+  prompt: string,
+  gridSize: number,
+  spriteUrl: string,
+  cellIds: number[],
+): Promise<number[]> {
+  const total = gridSize * gridSize;
+  let dataUrl: string;
+  try {
+    dataUrl = await fetchAsDataUrl(spriteUrl);
+  } catch (e: any) {
+    console.log('h: solveCaptcha composite fetch failed', e?.message);
+    return [];
+  }
+
+  const allCells = cellIds.length === total;
+  const cellsDesc = allCells ? `0 to ${total - 1}` : cellIds.join(', ');
+  const restriction = allCells
+    ? `List ALL cell numbers where the subject is visible, even partially. `
+    : `Evaluate ONLY cells [${cellsDesc}] — the other cells have been replaced and must be ignored. ` +
+    `From those cells only, list which ones contain the subject, even partially. `;
+
+  const promptText =
+    `reCAPTCHA challenge: "${prompt}"\n\n` +
+    `This image is a ${gridSize}×${gridSize} grid of equal cells numbered 0 to ${total - 1}, ` +
+    `reading left to right, top to bottom (cell 0 = top-left, cell ${total - 1} = bottom-right). ` +
+    restriction +
+    `Reply with ONLY a JSON array of integers, e.g. [0, 3, 7]. If none match, reply [].`;
+
+  console.log(`h: solveCaptcha Case A composite gridSize=${gridSize} cells=[${cellsDesc}]`, promptText.substring(0, 180));
+
+  const paramsA = [{ role: 'user', content: [{ type: 'text', text: promptText }, { type: 'image_url', image_url: { url: dataUrl } }] }];
+  dumpInvokeParams(paramsA, `case-a-cells-${cellsDesc.replace(/,\s*/g, '_')}`);
+  const response = await model.invoke(paramsA);
+
+  const text = typeof response.content === 'string' ? response.content : JSON.stringify(response.content);
+  console.log(`h: solveCaptcha Case A composite cells=[${cellsDesc}] response`, text);
+  return parseIds(text);
+}
+
+/**
+ * Case B — individual tiles: each tile has its own unique image URL.
+ * Send one model call per tile asking whether it matches the challenge.
+ */
+async function solveIndividualTiles(
+  prompt: string,
+  images: Array<{ id: number; url: string }>,
+): Promise<number[]> {
+  const matchingIds: number[] = [];
+
+  for (const tile of images) {
+    let dataUrl: string;
+    try {
+      dataUrl = await fetchAsDataUrl(tile.url);
+    } catch (e: any) {
+      console.log(`h: solveCaptcha Case B tile ${tile.id} fetch failed`, e?.message);
+      continue;
+    }
+
+    const promptText =
+      `reCAPTCHA challenge: "${prompt}"\n\n` +
+      `Does this image contain the subject described in the challenge? ` +
+      `Reply with ONLY [${tile.id}] if yes, or [] if no. Do not include any other text.`;
+
+    const paramsB = [{ role: 'user', content: [{ type: 'text', text: promptText }, { type: 'image_url', image_url: { url: dataUrl } }] }];
+    dumpInvokeParams(paramsB, `case-b-tile-${tile.id}`);
+    const response = await model.invoke(paramsB);
+
+    const text = typeof response.content === 'string' ? response.content : JSON.stringify(response.content);
+    console.log(`h: solveCaptcha Case B tile ${tile.id} response`, text);
+    matchingIds.push(...parseIds(text));
+  }
+
+  return matchingIds;
+}
+
+export async function solveCaptchaChallenge(
+  prompt: string,
+  images: Array<{ id: number; url: string; done?: boolean; selected?: boolean }>,
+): Promise<number[]> {
+  // gridSize is always derived from the full grid count (9 for 3×3, 16 for 4×4).
+  // It must NOT be computed from the active subset — done tiles still occupy grid positions.
+  const gridSize = Math.round(Math.sqrt(images.length));
+
+  // done tiles (rc-imageselect-dynamic-selected): already confirmed correct by Google,
+  // visually blank. Skip them entirely — their images must not be fetched or re-evaluated.
+  const activeTiles = images.filter(t => !t.done);
+
+  console.log(`h: solveCaptcha gridSize=${gridSize} tiles=${images.length} active=${activeTiles.length} done=${images.length - activeTiles.length}`);
+
+  if (activeTiles.length === 0) return [];
+
+  // Group active tiles by URL.
+  // A URL shared by multiple tiles = sprite sheet (Case A: one composite call).
+  // A URL unique to one tile = individual/refreshed image (Case B: per-tile call).
+  // This correctly handles mixed rounds where some tiles have been refreshed.
+  const urlToTiles = new Map<string, Array<{ id: number; url: string }>>();
+  for (const tile of activeTiles) {
+    const group = urlToTiles.get(tile.url) ?? [];
+    group.push(tile);
+    urlToTiles.set(tile.url, group);
+  }
+
+  const results: number[] = [];
+  for (const [url, group] of urlToTiles) {
+    if (group.length > 1) {
+      // Multiple active tiles share this URL → sprite sheet → one composite call.
+      // cellIds is the active subset; solveCompositeGrid restricts the model to those cells.
+      const cellIds = group.map(t => t.id);
+      console.log(`h: solveCaptcha sprite group size=${group.length} cells=[${cellIds}]`);
+      results.push(...await solveCompositeGrid(prompt, gridSize, url, cellIds));
+    } else {
+      // Unique URL → individual/refreshed tile → per-tile call
+      results.push(...await solveIndividualTiles(prompt, group));
+    }
+  }
+  return results;
+}

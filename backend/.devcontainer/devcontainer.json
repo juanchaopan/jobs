@@ -1,0 +1,28 @@
+{
+	"name": "backend",
+	"dockerComposeFile": "${localWorkspaceFolder}/../docker-compose.yml",
+	"service": "backend",
+	"workspaceFolder": "/app",
+	"features": {
+		"ghcr.io/devcontainers/features/java:1": {
+			"version": "none",
+			"installMaven": "false",
+			"installGradle": "true"
+		}
+	},
+	"postCreateCommand": "",
+	"customizations": {
+		"vscode": {
+			"settings": {
+				"java.import.gradle.java.home": "/usr/lib/jvm/msopenjdk-current",
+				"java.jdt.ls.java.home": "/usr/lib/jvm/msopenjdk-current"
+			},
+			"extensions": [
+				"anthropic.claude-code"
+			]
+		}
+	},
+	"runServices": [
+		"backend"
+	]
+}

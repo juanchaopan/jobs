@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cat /app/../docker-compose.yml)",
+      "Bash(find / -maxdepth 4 -name \"docker-compose.yml\")",
+      "Read(//root/**)",
+      "Bash(find /workspace /projects -maxdepth 5 -name \"docker-compose.yml\")",
+      "Bash(ls /app/..)",
+      "Bash(printenv)",
+      "Bash(curl -s --max-time 2 http://localhost/api/resumes)",
+      "Bash(curl -s --max-time 3 http://localhost/api/resumes)",
+      "Bash(curl -s --max-time 3 http://localhost:8080/api/resumes)",
+      "Bash(find / -maxdepth 3 -name \"docker-compose.yml\")",
+      "Bash(ls /)",
+      "Bash(ls /workspace)",
+      "Read(//etc/**)",
+      "Bash(grep -v \"^$\")",
+      "Bash(env)"
+    ]
+  }
+}
